@@ -22,7 +22,7 @@
     "url": "https://www.yunzhuhub.com/v1beta/models/{model}:generateContent",
     "model": "gemini-3.6-flash",
     "key_env": "YUNZHU_API_KEY",
-    "max_request_bytes": 20000000,
+    "max_request_bytes": 94560000,
     "min_video_seconds": 2.0,
     "generation_config": {
       "thinkingConfig": {
@@ -44,9 +44,11 @@
       "Relay docs (docs.yunzhuhub.com/reference/) list only",
       "/v1beta/models/{model}:generateContent for Gemini format, no Files API,",
       "no streamGenerateContent, and no stated body-size limit.",
-      "max_request_bytes: Google documents 20 MB as the inline threshold; the relay",
-      "accepted a 30 MB body in the probe, its ceiling is unmeasured. Raise after",
-      "checking the longest action_time episode, media is shrunk spatially to fit.",
+      "max_request_bytes is the same 94.56 MB the direct-endpoint configuration",
+      "uses. Measured 2026-11-09 through this relay: action_time episodes of 25,",
+      "45 and 66 MB (an 88 MB base64 body) were accepted unshrunk in 44-69 s each,",
+      "so only episodes above ~68 MB are shrunk spatially, as on the direct route.",
+      "(At 20 MB more than half of the episodes would have been re-encoded.)",
       "Acceptance check (done 2026-11-09 on a 105-question pilot through this",
       "relay): usageMetadata.promptTokenCount must grow linearly with clip length.",
       "Measured: action_time episodes 24.6 s -> 2,050, 44.7 s -> 3,444, 62.9 s ->",
