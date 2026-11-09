@@ -60,7 +60,9 @@ def code_version(repo_root: Any = ".") -> dict[str, Any]:
     def _git(*args: str) -> str | None:
         try:
             proc = subprocess.run(["git", "-C", str(repo_root), *args],
-                                  capture_output=True, text=True, timeout=30)
+                                  capture_output=True, text=True,
+                                  encoding="utf-8", errors="replace",
+                                  timeout=30)
         except OSError:
             return None
         return proc.stdout if proc.returncode == 0 else None

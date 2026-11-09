@@ -88,6 +88,7 @@ EXPECTED_GENERATION = {
     "qwen3-8-max":                   (0.0, 4096, "disabled"),
     "qwen3-8-max-thinking":          (0.0, 4096, "enabled"),
     "gemini-3-6-flash":              (0.0, 4096, "disabled"),
+    "gpt-6-astra":                    (0.0, 4096, "always_on"),
     "doubao-seed-2-0-lite":          (0.0, 4096, "disabled"),
     "qwen3-vl-235b-a22b-api":        (0.0, 4096, "disabled"),
     # Reports thoughtsTokenCount on every call and offers no switch, so the
@@ -113,6 +114,14 @@ check("cosmos fps", cosmos3_edge.cosmos_frame_kwargs({"mode": "fps", "value": 1.
 check("cosmos uniform must null the built-in fps",
       cosmos3_edge.cosmos_frame_kwargs({"mode": "uniform", "value": 16})
       == {"num_frames": 16, "fps": None})
+check("openai episode fps uses shared rounding and bounds",
+      openai_compat.video_frame_count(
+          PROTOCOL, total_frames=3470, source_fps=30.0,
+          frames={"mode": "fps", "value": 1.0}) == 116)
+check("openai frame sampling is capped at 768",
+      openai_compat.video_frame_count(
+          PROTOCOL, total_frames=300000, source_fps=30.0,
+          frames={"mode": "fps", "value": 2.0}) == 768)
 
 print("4. message structures, pinned")
 PARTS = [{"type": "video", "path": "/abs/clip.mp4"}, {"type": "text", "text": "Q?"}]
@@ -154,6 +163,49 @@ oc = openai_compat.build(
     api_model("openai_compat", extra_payload={"temperature": 0.7}), PROTOCOL)
 check("extra_payload may override anything",
       oc.payload(TEXT_PARTS)["temperature"] == 0.7)
+
+native = openai_compat.build(api_model("openai_compat", video_input="native"), PROTOCOL)
+original_data_url = openai_compat.data_url
+openai_compat.data_url = lambda path, kind: f"data:{kind}/mock;base64,x"
+try:
+    native_content, native_frames, _ = native.request_content(
+        PARTS, {"mode": "fps", "value": 2.0})
+finally:
+    openai_compat.data_url = original_data_url
+check("native video remains a video_url",
+      native_content[0]["type"] == "video_url" and not native_frames)
+
+original_extract = openai_compat.extract_video_frames
+openai_compat.extract_video_frames = lambda *args, **kwargs: (
+    [("data:image/jpeg;base64,a", 0.5),
+     ("data:image/jpeg;base64,b", 1.5)],
+    {"source": str(args[0]), "op": "extract_frames", "sampled_frames": 2})
+try:
+    framed = openai_compat.build(
+        api_model("openai_compat", video_input="frames"), PROTOCOL)
+    framed_content, framed_used, framed_transforms = framed.request_content(
+        PARTS, {"mode": "fps", "value": 2.0})
+finally:
+    openai_compat.extract_video_frames = original_extract
+check("frame mode sends timestamped image_url parts",
+      [p["type"] for p in framed_content]
+      == ["text", "image_url", "text", "image_url", "text"]
+      and framed_content[0]["text"].endswith("t=0.500s"))
+check("frame mode records sampled frames",
+      framed_used == {"video0": 2}
+      and framed_transforms[0]["op"] == "extract_frames")
+
+astra = adapters.build(MODELS["GPT-6-Astra"], PROTOCOL)
+astra_payload = astra.payload(TEXT_PARTS)
+check("astra uses supported request fields",
+      "temperature" not in astra_payload
+      and "max_tokens" not in astra_payload
+      and astra_payload["max_completion_tokens"] == 4096
+      and astra_payload["reasoning_effort"] == "low")
+check("astra records effective generation settings",
+      astra.generation_settings()["temperature"] is None
+      and astra.generation_settings()["thinking"] == "always_on")
+check("astra converts video to frames", astra.video_input == "frames")
 
 gm = gemini.build(api_model("gemini", url="https://api.example/{model}:generate"), PROTOCOL)
 check("gemini url formats the model", gm.url == "https://api.example/served-model:generate")

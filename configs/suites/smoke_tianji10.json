@@ -1,0 +1,25 @@
+{
+  "schema": 1,
+  "name": "smoke-tianji10",
+  "dimensions": [
+    "action_time",
+    "current_action",
+    "frame_match",
+    "frame_order",
+    "next_action",
+    "next_action_with_goal",
+    "view_match"
+  ],
+  "scenarios": {
+    "tidy_stationery_tianji": "cbdcac535db457aa9d35f5795e71e73c198477fe44a0fd2c2e03ab4bf78ab9e5",
+    "zip_pouch_tianji": "8aa123696db5e21cf8fdcc12983a4e966a6d592cad4c1654993749c67efc02b8",
+    "box_shoe_tianji": "75005498066b9bd32ae5f735a0b00a9f67a12cfd67846440b7044b57526c89cc",
+    "sort_cubes_tianji": "e655e40eaf3efd385d55cac970e8ec91513c74a6c4404281538847f67410ca3e",
+    "pack_express_tianji": "eadbf36a699465c4796771d896d20c8e1f51401e85afca60927804c152ee4678",
+    "wash_dishes_tianji": "e486f439c91dc24a2a767350b57e0a38c19bd58975a7a0f5eb3f0538c9ed2488",
+    "make_tea_tianji": "c294f1082e7c628322c3d860b162419a10f8f3bb73310b0fdb4ceb23f6f7c443",
+    "brew_teabag_tianji": "78c721787506704a85ad994de76492bd8b4b3105e8cab0bd779b6a73ea2e37d9",
+    "takeout_trash_v20_tianji": "bc2731d8a58d70fb9e807029a352f62401613b141406128a84f1b7159a3f7ecd",
+    "pack_aidkit_tianji": "5ecbbb441a44ff142c573d92dacb20587722de5aee64bbce34eb5075f80b27e3"
+  }
+}

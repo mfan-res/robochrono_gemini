@@ -1,0 +1,28 @@
+{
+  "name": "GPT-6-Astra",
+  "adapter": "openai_compat",
+  "weights": "api:openai/gpt-6-astra",
+  "environment": "transformers-4x",
+  "official": {
+    "url": "https://developers.openai.com/api/docs/models/gpt-6-astra",
+    "transformers": { "value": null, "source": "none", "note": "Served remotely; no local stack." }
+  },
+  "generation": {
+    "thinking": {
+      "value": "always_on",
+      "source": "L1",
+      "note": "GPT-6 Astra does not support disabling reasoning; reasoning_effort=low is the closest available setting."
+    }
+  },
+  "api": {
+    "url": "https://api.openai.com/v1/chat/completions",
+    "model": "gpt-6-astra",
+    "key_env": "OPENAI_API_KEY",
+    "media_url_format": "data_url",
+    "video_input": "frames",
+    "omit_temperature": true,
+    "max_tokens_param": "max_completion_tokens",
+    "extra_payload": { "reasoning_effort": "low" },
+    "_note": "OpenAI accepts image input, but not video input for this model; videos are sampled according to protocol.frames and sent as image_url parts."
+  }
+}

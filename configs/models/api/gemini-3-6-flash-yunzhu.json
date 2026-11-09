@@ -1,0 +1,30 @@
+{
+  "name": "Gemini-3.6-Flash-YunZhu",
+  "adapter": "gemini",
+  "weights": "api:yunzhu/gemini-3.6-flash",
+  "environment": "transformers-4x",
+  "official": {
+    "url": "https://ai.google.dev/gemini-api/docs",
+    "transformers": {
+      "value": null,
+      "source": "none",
+      "note": "Google model served remotely through YunZhu Hub."
+    }
+  },
+  "api": {
+    "url": "https://www.yunzhuhub.com/v1beta/models/{model}:generateContent",
+    "model": "gemini-3.6-flash",
+    "key_env": "YUNZHU_API_KEY",
+    "max_request_bytes": 94560000,
+    "min_video_seconds": 2.0,
+    "video_processing": "STATIC",
+    "video_fps": 2.0,
+    "generation_config": {
+      "thinkingConfig": {
+        "thinkingLevel": "MINIMAL",
+        "includeThoughts": false
+      }
+    },
+    "_note": "Gemini-native static video at 2 FPS. MINIMAL is the closest available match to disabled thinking; usageMetadata.thoughtsTokenCount records the actual state per call."
+  }
+}

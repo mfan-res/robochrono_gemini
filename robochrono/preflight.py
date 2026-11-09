@@ -21,6 +21,7 @@ Only FAIL affects the exit status.
 from __future__ import annotations
 
 import importlib
+import importlib.util
 import json
 import os
 import shutil
@@ -293,6 +294,13 @@ def check_api_keys(models: list[ModelConfig]) -> list[Check]:
         out.append(Check(OK if found else WARN, "ffmpeg",
                          "" if found else "not on PATH — media over the request "
                          "budget cannot be shrunk and will fail loudly"))
+    needs_cv2 = any(m.kind == "api" and m.adapter == "openai_compat"
+                    and m.api.get("video_input") == "frames" for m in models)
+    if needs_cv2:
+        found = importlib.util.find_spec("cv2") is not None
+        out.append(Check(OK if found else FAIL, "package cv2",
+                         "" if found else "video_input=frames requires "
+                         "opencv-python-headless in the API environment"))
     return out
 
 

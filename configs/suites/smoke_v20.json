@@ -1,0 +1,18 @@
+{
+  "schema": 1,
+  "name": "smoke-v20",
+  "dimensions": [
+    "action_time",
+    "current_action",
+    "frame_match",
+    "frame_order",
+    "next_action",
+    "next_action_with_goal",
+    "view_match"
+  ],
+  "scenarios": {
+    "box_pen_tianjihand": "4fa636a89ef58d026aa7b7e3bc4c8d200cce8cb72f28f2c1dac84dd5fec5918f",
+    "move_gift_tianjihand": "62ef8373691ba1139e7a4b41556c948094210c459ed3ef180d36d7f077748d6f",
+    "stack_cubes_tianjihand": "e0f3cce0150dc08d219417fbca07804d3e3f12b520a9635f8d8eaae453089a20"
+  }
+}

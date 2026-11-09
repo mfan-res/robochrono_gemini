@@ -351,7 +351,7 @@ the API adapters route their calls through it when it is present.
 
 ```bash
 UV_PROJECT_ENVIRONMENT=.venvs/api uv venv .venvs/api --python 3.11
-uv pip install --python .venvs/api/bin/python requests pillow numpy
+uv pip install --python .venvs/api/bin/python requests pillow numpy opencv-python-headless
 .venvs/api/bin/python -m robochrono preflight --only api
 ```
 

@@ -201,7 +201,9 @@ def _latest_run(results_root: Any) -> Path:
 
 
 def _floors() -> dict[str, Any]:
-    return json.loads(Path("configs/protocol.json").read_text())["degenerate_floor"]
+    return json.loads(
+        Path("configs/protocol.json").read_text(encoding="utf-8")
+    )["degenerate_floor"]
 
 
 def _write_report(run_dirs: list[Path], out_dir: Path) -> int:

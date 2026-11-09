@@ -109,6 +109,7 @@ use `_note` liberally; the shipped configurations do.
     "model": "my-served-model",              // the served model id sent per request
     "key_env": "MY_PROVIDER_API_KEY",        // env var holding the key; never the key
     "media_url_format": "data_url",          // inline media as data: URLs
+    "video_input": "native",                 // or "frames" for image-only APIs
     "max_request_bytes": 10000000,           // server body cap; oversized media is
                                              // shrunk to fit (spatially, never temporally)
     "min_video_seconds": 2.0,                // some servers refuse shorter clips
@@ -121,7 +122,9 @@ Dialect quirks the `openai_compat` adapter understands, all optional:
 `thinking_param` (the field name for the provider's thinking toggle),
 `send_thinking` (send the toggle even when disabled), `generation_config`
 (extra fields merged into the request — the Gemini adapter uses this for
-`thinkingConfig`).
+`thinkingConfig`). `video_input` selects native `video_url` upload or JPEG
+`image_url` frames sampled by the shared protocol; `frame_jpeg_quality`
+defaults to 90.
 
 ## Evidence grades
 

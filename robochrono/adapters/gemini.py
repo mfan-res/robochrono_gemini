@@ -20,7 +20,8 @@ from typing import Any
 from .base import Adapter, AdapterResult, encode_file, media_mime
 
 
-def gemini_parts(parts: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def gemini_parts(parts: list[dict[str, Any]], *, video_fps: float = 0.0,
+                 video_processing: str = "") -> list[dict[str, Any]]:
     output: list[dict[str, Any]] = []
     for part in parts:
         kind = part.get("type")
@@ -28,8 +29,16 @@ def gemini_parts(parts: list[dict[str, Any]]) -> list[dict[str, Any]]:
             output.append({"text": str(part.get("text", ""))})
         elif kind in {"image", "video"}:
             path = Path(str(part["path"]))
-            output.append({"inline_data": {"mime_type": media_mime(path, kind),
-                                           "data": encode_file(path)}})
+            media_part: dict[str, Any] = {
+                "inline_data": {"mime_type": media_mime(path, kind),
+                                "data": encode_file(path)}
+            }
+            if kind == "video":
+                if video_fps > 0:
+                    media_part["video_metadata"] = {"fps": video_fps}
+                if video_processing:
+                    media_part["media_processing"] = video_processing
+            output.append(media_part)
         else:
             raise ValueError(f"unsupported content part type: {kind}")
     return output
@@ -56,6 +65,8 @@ class GeminiAdapter(Adapter):
         self.min_video_seconds = float(api.get("min_video_seconds") or 0.0)
         self.max_request_bytes = int(api.get("max_request_bytes",
                                              protocol.max_request_bytes))
+        self.video_fps = float(api.get("video_fps") or 0.0)
+        self.video_processing = str(api.get("video_processing") or "")
         self.proxy = api.get("proxy")
         # The key is looked up at construction but only *required* at call
         # time: a missing credential should stop a call, not a dry run or a
@@ -71,7 +82,9 @@ class GeminiAdapter(Adapter):
         gen_cfg.update(api.get("generation_config") or {})
         payload: dict[str, Any] = {
             "systemInstruction": {"parts": [{"text": self.system_prompt}]},
-            "contents": [{"role": "user", "parts": gemini_parts(parts)}],
+            "contents": [{"role": "user", "parts": gemini_parts(
+                parts, video_fps=self.video_fps,
+                video_processing=self.video_processing)}],
             "generationConfig": gen_cfg,
         }
         for k, v in (api.get("extra_payload") or {}).items():
