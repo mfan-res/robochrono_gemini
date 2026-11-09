@@ -126,6 +126,13 @@ Dialect quirks the `openai_compat` adapter understands, all optional:
 `image_url` frames sampled by the shared protocol; `frame_jpeg_quality`
 defaults to 90.
 
+The `gemini` adapter sends the key as a header, never in the URL:
+`key_header` (default `x-goog-api-key`) and `key_prefix` (for example
+`"Bearer "` on relays that speak `Authorization`). Its `videoMetadata.fps`
+follows each dimension's `protocol.frames` spec; `video_fps` pins a number
+for every dimension, `0` sends none. Agentic video (`tools.videoRetrieval`)
+must stay off — no other model in the roster may re-query its input.
+
 ## Evidence grades
 
 Every value in `official` and `generation` carries a `source` grade —

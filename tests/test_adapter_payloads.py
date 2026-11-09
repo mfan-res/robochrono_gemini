@@ -88,6 +88,9 @@ EXPECTED_GENERATION = {
     "qwen3-8-max":                   (0.0, 4096, "disabled"),
     "qwen3-8-max-thinking":          (0.0, 4096, "enabled"),
     "gemini-3-6-flash":              (0.0, 4096, "disabled"),
+    # Same model through a relay; thinkingLevel=minimal is the lowest the
+    # endpoint offers and it is measured as not off, so declared always_on.
+    "gemini-3-6-flash-yunzhu":       (0.0, 4096, "always_on"),
     "gpt-6-astra":                    (0.0, 4096, "always_on"),
     "doubao-seed-2-0-lite":          (0.0, 4096, "disabled"),
     "qwen3-vl-235b-a22b-api":        (0.0, 4096, "disabled"),
@@ -220,6 +223,48 @@ gm = gemini.build(api_model(
 check("gemini generationConfig merges key-by-key",
       gm.payload(TEXT_PARTS)["generationConfig"].get("temperature") == 0.0
       and gm.payload(TEXT_PARTS)["generationConfig"]["thinkingConfig"] == {"x": 1})
+
+print("5a. Gemini media parts, key placement and frame rate")
+gm = gemini.build(api_model("gemini", url="u", key_env="GEMINI_API_KEY"), PROTOCOL)
+original_encode = gemini.encode_file
+gemini.encode_file = lambda path: "x"
+try:
+    vparts = gm.payload(PARTS, video_fps=2.0)["contents"][0]["parts"]
+    nparts = gm.payload(PARTS)["contents"][0]["parts"]
+finally:
+    gemini.encode_file = original_encode
+check("gemini media is canonical camelCase inlineData",
+      vparts[0] == {"inlineData": {"mimeType": "video/mp4", "data": "x"},
+                    "videoMetadata": {"fps": 2.0}} and vparts[1] == {"text": "Q?"})
+check("gemini sends no videoMetadata without a rate", "videoMetadata" not in nparts[0])
+check("gemini fps follows the dimension's protocol spec",
+      gm.video_fps({"mode": "fps", "value": 1.0}) == 1.0
+      and gm.video_fps({"mode": "uniform", "value": 16}) == 0.0
+      and gm.video_fps({}) == 0.0)
+check("gemini api.video_fps pins the rate",
+      gemini.build(api_model("gemini", url="u", video_fps=2.0), PROTOCOL)
+      .video_fps({"mode": "fps", "value": 1.0}) == 2.0)
+check("gemini api.video_fps 0 drops the rate",
+      gemini.build(api_model("gemini", url="u", video_fps=0), PROTOCOL)
+      .video_fps({"mode": "fps", "value": 2.0}) == 0.0)
+check("gemini key goes in a header, never the url",
+      gm.auth_headers() == {"x-goog-api-key": "test-key"} and "key=" not in gm.url)
+check("gemini bearer dialect",
+      gemini.build(api_model("gemini", url="u", key_env="GEMINI_API_KEY",
+                             key_header="Authorization", key_prefix="Bearer "),
+                   PROTOCOL).auth_headers() == {"Authorization": "Bearer test-key"})
+try:
+    gemini.build(api_model("gemini", url="https://api.example/x?key=abc"), PROTOCOL)
+    check("gemini refuses a key in the url", False, "no exception")
+except ValueError:
+    check("gemini refuses a key in the url", True)
+yunzhu = MODELS["Gemini-3.6-Flash-YunZhu"]
+check("yunzhu config: bearer header, no url key, no agentic video",
+      yunzhu.api.get("key_header") == "Authorization"
+      and "key=" not in yunzhu.api["url"]
+      and "tools" not in (yunzhu.api.get("extra_payload") or {}))
+check("yunzhu config: frame rate follows the protocol",
+      yunzhu.api.get("video_fps") is None)
 
 print("5b. per-card memory budgets translate for accelerate")
 from robochrono.adapters.base import max_memory_map  # noqa: E402

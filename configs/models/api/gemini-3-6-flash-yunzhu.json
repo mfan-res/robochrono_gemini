@@ -8,23 +8,45 @@
     "transformers": {
       "value": null,
       "source": "none",
-      "note": "Google model served remotely through YunZhu Hub."
+      "note": "Google model served remotely through YunZhu Hub's Gemini-native generateContent route."
+    }
+  },
+  "generation": {
+    "thinking": {
+      "value": "always_on",
+      "source": "L1",
+      "note": "gemini-3.6-flash exposes thinkingLevel minimal/low/medium/high and no off switch. Measured on the direct Google endpoint at thinkingLevel=minimal over an action_time run: 96.5% of calls returned thought tokens, median 1,033 per call, 94% of all output tokens were thoughts. So the model reasons where the open-weight roster is held at thinking=disabled; usageMetadata.thoughtsTokenCount records the actual state per call and must be reported with the scores."
     }
   },
   "api": {
     "url": "https://www.yunzhuhub.com/v1beta/models/{model}:generateContent",
     "model": "gemini-3.6-flash",
     "key_env": "YUNZHU_API_KEY",
-    "max_request_bytes": 94560000,
+    "key_header": "Authorization",
+    "key_prefix": "Bearer ",
+    "max_request_bytes": 20000000,
     "min_video_seconds": 2.0,
-    "video_processing": "STATIC",
-    "video_fps": 2.0,
     "generation_config": {
       "thinkingConfig": {
-        "thinkingLevel": "MINIMAL",
+        "thinkingLevel": "minimal",
         "includeThoughts": false
       }
     },
-    "_note": "Gemini-native static video at 2 FPS. MINIMAL is the closest available match to disabled thinking; usageMetadata.thoughtsTokenCount records the actual state per call."
+    "_note": [
+      "Gemini-native static video, inline base64. The frame rate is not set here:",
+      "the adapter sends videoMetadata.fps from each dimension's protocol.frames",
+      "spec (2 fps clips, 1 fps action_time episodes), identical to what the local",
+      "adapters sample at. Set api.video_fps only to pin or (0) to drop it.",
+      "Agentic video (tools.videoRetrieval) is deliberately not enabled: no other",
+      "model in the roster may re-query its input.",
+      "The key is sent as Authorization: Bearer, the form this relay accepted in",
+      "the probe; the direct Google endpoint takes the default x-goog-api-key.",
+      "max_request_bytes: Google documents 20 MB as the inline threshold; the relay",
+      "accepted a 30 MB body in the probe, its ceiling is unmeasured. Raise after",
+      "checking the longest action_time episode, media is shrunk spatially to fit.",
+      "Acceptance check before any full run: usageMetadata.promptTokenCount on the",
+      "video dimensions must be in the thousands (a 27 s clip at 2 fps is on the",
+      "order of 1e4 tokens), not the few hundred that a text-only prompt costs."
+    ]
   }
 }
