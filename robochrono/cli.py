@@ -73,6 +73,10 @@ def build_parser() -> argparse.ArgumentParser:
                      help="start a new run directory even if this configuration ran before")
     run.add_argument("--overwrite", action="store_true",
                      help="rerun completed questions (existing rows go to .bak)")
+    run.add_argument("--items-file", default=None,
+                     help="a file of question ids, one per line; run only "
+                          "these — reproduces an earlier run's question set "
+                          "without touching the data")
     run.add_argument("--limit-items", type=int, default=None,
                      help="cap questions per (scenario, dimension) — "
                           "sampling for a quick check")
@@ -259,7 +263,38 @@ def cmd_validate_data(args) -> int:
     return 0 if report.ok else 1
 
 
-def _dry_run(args, models, suite, specs, skipped) -> int:
+def _item_filter(args, specs) -> set[str] | None:
+    """The ``--items-file`` id set, checked against the selection.
+
+    An id that matches nothing is a typo, a stale list, or a scenario left out
+    of the selection, and would otherwise show up as a quietly smaller run
+    that still reports success. Refuse instead, and name what was not found.
+    """
+    if not getattr(args, "items_file", None):
+        return None
+    from .dataset.loader import load_questions, read_item_ids
+    from .dataset.render import load_question_bank
+
+    keep = read_item_ids(args.items_file)
+    bank = load_question_bank(args.data_root, sorted({s.scenario for s in specs}))
+    found: set[str] = set()
+    for scenario, dimension in sorted({(s.scenario, s.dimension) for s in specs}):
+        for question in load_questions(args.data_root, scenario, dimension,
+                                       bank=bank, keep=keep):
+            found.add(str(question.get("id")))
+    missing = sorted(keep - found)
+    if missing:
+        shown = ", ".join(missing[:5])
+        raise SystemExit(
+            f"{args.items_file}: {len(missing)} of {len(keep)} question id(s) "
+            f"match nothing in this selection — e.g. {shown}"
+            f"{' …' if len(missing) > 5 else ''}")
+    print(f"--items-file: {len(keep)} question(s) selected from "
+          f"{args.items_file}")
+    return keep
+
+
+def _dry_run(args, models, suite, specs, skipped, keep=None) -> int:
     from .dataset.loader import load_questions, media_paths, resolve_media
     from .dataset.render import load_question_bank
     from .orchestrate.dispatch import dispatch
@@ -275,7 +310,8 @@ def _dry_run(args, models, suite, specs, skipped) -> int:
     questions_by_combo: dict[tuple, int] = {}
     media: set[tuple[str, str]] = set()      # (scenario, relative path)
     for scenario, dimension in combos:
-        items = load_questions(args.data_root, scenario, dimension, bank=bank)
+        items = load_questions(args.data_root, scenario, dimension,
+                               bank=bank, keep=keep)
         questions_by_combo[(scenario, dimension)] = len(items)
         for q in items:
             media.update((scenario, p) for p in media_paths(q))
@@ -294,7 +330,7 @@ def _dry_run(args, models, suite, specs, skipped) -> int:
     return 0
 
 
-def _execute(args, models, specs, run_dir) -> None:
+def _execute(args, models, specs, run_dir, keep=None) -> None:
     from .orchestrate.execute import execute
     from .orchestrate.pool import visible_gpus
 
@@ -311,6 +347,7 @@ def _execute(args, models, specs, run_dir) -> None:
             gpus=gpus,
             gpus_per_worker=args.gpus_per_worker or runtime.gpus_per_worker,
             limit_items=args.limit_items, limit_groups=args.limit_groups,
+            keep=keep,
             overwrite=args.overwrite,
             models_dir=args.models_dir, protocol_path="configs/protocol.json")
 
@@ -325,8 +362,10 @@ def cmd_eval(args) -> int:
         print("nothing to run:")
         _print_skipped(skipped)
         return 1
+    # Before anything is created: a bad id list must not leave a run directory.
+    keep = _item_filter(args, specs)
     if args.dry_run:
-        return _dry_run(args, models, suite, specs, skipped)
+        return _dry_run(args, models, suite, specs, skipped, keep)
 
     if not args.run_dir:
         # The suite pins content; running with any of it missing would
@@ -363,7 +402,7 @@ def cmd_eval(args) -> int:
         record = runid.read_run_record(args.run_dir)
         run = runid.RunDir(path=Path(args.run_dir), run_id=Path(args.run_dir).name,
                            fingerprint=str(record.get("fingerprint")), resumed=True)
-        _execute(args, models, specs, run)
+        _execute(args, models, specs, run, keep)
         return 0
 
     model_paths = [Path(args.models_dir) / m.kind / f"{m.slug}.json" for m in models]
@@ -382,7 +421,7 @@ def cmd_eval(args) -> int:
     print(f"run {run.run_id}" + (" (resuming)" if run.resumed else " (new)"))
 
     if args.no_dispatch:
-        _execute(args, models, specs, run)
+        _execute(args, models, specs, run, keep)
         failures = 0
     else:
         passthrough = ["--suite", args.suite,
@@ -395,6 +434,8 @@ def cmd_eval(args) -> int:
                 passthrough += [flag, *value]
         if args.only:
             passthrough += ["--only", args.only]
+        if args.items_file:
+            passthrough += ["--items-file", args.items_file]
         if args.shard:
             passthrough += ["--shard", args.shard]
         for flag, value in (("--limit-items", args.limit_items),

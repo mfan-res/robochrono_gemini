@@ -99,6 +99,7 @@ def execute_model(
     limit_items: int | None = None,
     limit_groups: int | None = None,
     overwrite: bool = False,
+    keep: set[str] | None = None,
 ) -> dict[str, dict[str, Any]]:
     """Run one model's specs serially; return summaries by spec key."""
     adapter = adapters.build(model, protocol, adapter_runtime)
@@ -108,7 +109,8 @@ def execute_model(
         print(f"[{model.slug}] {spec.scenario}/{spec.dimension}", flush=True)
         dimension = dimensions.build(spec.dimension,
                                      strip_reasoning=protocol.strip_reasoning)
-        items = load_questions(data_root, spec.scenario, spec.dimension, bank=bank)
+        items = load_questions(data_root, spec.scenario, spec.dimension,
+                               bank=bank, keep=keep)
         store = ResultStore(spec.store_path(run_dir))
         summaries[spec.key] = engine.run(
             dimension, items, adapter, store,
@@ -140,6 +142,7 @@ def execute(
     overwrite: bool = False,
     models_dir: Any = "configs/models",
     protocol_path: Any = "configs/protocol.json",
+    keep: set[str] | None = None,
 ) -> dict[str, dict[str, Any]]:
     """Run every spec, model-major. Returns summaries by spec key.
 
@@ -158,6 +161,10 @@ def execute(
         model = by_slug[slug]
         model_specs = [s for s in specs if s.model == slug]
         if model.kind == "local" and gpus:
+            if keep is not None:
+                raise NotImplementedError(
+                    "--items-file is wired for API models only on this branch; "
+                    "the worker pool does not pass the id list to its children")
             from .pool import run_model_pool
             # A model may declare how many cards one replica needs; the
             # invocation-level value is only a default for those that do not.
@@ -178,5 +185,5 @@ def execute(
                 concurrency=api_concurrency if is_api else 1,
                 rate_limit=api_rate_limit if is_api else 0.0,
                 limit_items=limit_items, limit_groups=limit_groups,
-                overwrite=overwrite))
+                overwrite=overwrite, keep=keep))
     return summaries
