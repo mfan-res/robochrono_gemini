@@ -259,8 +259,9 @@ try:
 except ValueError:
     check("gemini refuses a key in the url", True)
 yunzhu = MODELS["Gemini-3.6-Flash-YunZhu"]
-check("yunzhu config: bearer header, no url key, no agentic video",
-      yunzhu.api.get("key_header") == "Authorization"
+check("yunzhu config: documented x-goog-api-key header, no url key, no agentic video",
+      yunzhu.api.get("key_header") is None
+      and yunzhu.api["url"].startswith("https://www.yunzhuhub.com/v1beta/models/")
       and "key=" not in yunzhu.api["url"]
       and "tools" not in (yunzhu.api.get("extra_payload") or {}))
 check("yunzhu config: frame rate follows the protocol",
