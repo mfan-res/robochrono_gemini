@@ -47,9 +47,18 @@
       "max_request_bytes: Google documents 20 MB as the inline threshold; the relay",
       "accepted a 30 MB body in the probe, its ceiling is unmeasured. Raise after",
       "checking the longest action_time episode, media is shrunk spatially to fit.",
-      "Acceptance check before any full run: usageMetadata.promptTokenCount on the",
-      "video dimensions must be in the thousands (a 27 s clip at 2 fps is on the",
-      "order of 1e4 tokens), not the few hundred that a text-only prompt costs."
+      "Acceptance check (done 2026-11-09 on a 105-question pilot through this",
+      "relay): usageMetadata.promptTokenCount must grow linearly with clip length.",
+      "Measured: action_time episodes 24.6 s -> 2,050, 44.7 s -> 3,444, 62.9 s ->",
+      "4,633 tokens, i.e. ~67 tokens per second at 1 fps = Gemini 3's documented",
+      "66 tokens per frame at the default (low) media resolution; 2-fps action",
+      "clips land at 550-1,300 vs ~190 for the text alone; frame_match scored",
+      "15/15, which is impossible without the clip. Media resolution is left at",
+      "the model default, which the protocol does not regulate; say so when",
+      "reporting. The relay reported thoughtsTokenCount = 0 on every pilot call",
+      "(billing_usage.reasoning_tokens also 0), unlike the direct-endpoint",
+      "measurement above: whether minimal thinks through this route is unknown,",
+      "so report the per-call count with the scores rather than assume either."
     ]
   }
 }
